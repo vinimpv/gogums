@@ -13,11 +13,13 @@ import (
 
 func main() {
 	site, err := services.Sites.CreateSite("lalala", "sadfhjash")
+	repo, err := services.Repositories.CreateRepository("www.google.com", "minha_chave", site.Id)
 
 	if err != nil {
 		log.Fatalln(err)
 	}
 	fmt.Println(site)
+	fmt.Println(repo)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)

@@ -22,11 +22,23 @@ func init() {
 
 func (ss *sitesService) GetSites() ([]models.Site, error) {
 	sites := []models.Site{}
-	err := db.DB.Select(&sites, "SELECT * FROM sites")
+	sql := `SELECT
+		st.id, st.name, st.url,
+		rp.id "repository.id", rp.url "repository.url", rp.key "repository.key", rp.site_id "repository.site_id"
+		FROM sites st 
+		INNER JOIN repositories rp
+		on st.id = rp.site_id`
+
+	err := db.DB.Select(&sites, sql)
 	if err != nil {
 		fmt.Println(err)
 	}
 	return sites, nil
+}
+
+func (ss *sitesService) GetSite(id int64) (models.Site, error) {
+	return models.Site{}, nil
+
 }
 
 func (ss *sitesService) CreateSite(name string, url string) (models.Site, error) {

@@ -10,10 +10,18 @@ import (
 var DB *sqlx.DB
 
 var schema = `
+DROP TABLE sites;
+DROP TABLE repositories;
 CREATE TABLE IF NOT EXISTS sites (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	name VARCHAR(80) DEFAULT '',
 	url VARCHAR(200) DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS repositories (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	url VARCHAR(200) DEFAULT '',
+	key VARCHAR(200) DEFAULT '',
+	site_id INTEGER
 );
 `
 
