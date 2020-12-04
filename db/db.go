@@ -9,9 +9,9 @@ import (
 
 var DB *sqlx.DB
 
+//DROP TABLE sites;
+//DROP TABLE repositories;
 var schema = `
-DROP TABLE sites;
-DROP TABLE repositories;
 CREATE TABLE IF NOT EXISTS sites (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	name VARCHAR(80) DEFAULT '',

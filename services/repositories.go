@@ -35,5 +35,5 @@ func (rs *repositoriesService) CreateRepository(url, key string, siteId int64) (
 	if err != nil {
 		return models.Repository{}, err
 	}
-	return models.Repository{Id: id, Key: key, SiteId: siteId}, nil
+	return models.Repository{Id: id, Url: url, Key: key, SiteId: siteId}, nil
 }

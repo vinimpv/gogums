@@ -2,17 +2,15 @@ package models
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
-	"os/exec"
+
+	"github.com/go-git/go-git/v5"
+	gitssh "github.com/go-git/go-git/v5/plumbing/transport/ssh"
+	"golang.org/x/crypto/ssh"
 )
 
-// this is going to be a model
-// encrypt the password and save the key in plain text
-// every site will have a repository
-
 type Repository struct {
-	Id     int64  `db:"id" json:"id"`
+	Id     int64  `db:"id" json:"id,ommitempty"`
 	Url    string `db:"url" json:"url"` // repo url
 	Key    string `db:"key" json:"key"` //ssh key as plain text
 	SiteId int64  `db:"site_id" json:"site_id"`
@@ -22,10 +20,22 @@ type Repository struct {
 func (r *Repository) commit() error {
 	return nil
 }
+func (r *Repository) Dir() string {
+	return fmt.Sprintf("repos/%v", r.Id)
+}
 
 // pulls from master
 func (r *Repository) pull() error {
+	ss, _ := ssh.ParsePrivateKey([]byte(r.Key))
+	auth := &gitssh.PublicKeys{User: "git", Signer: ss}
+	repo, _ := git.PlainOpen(r.Dir())
+	w, _ := repo.Worktree()
+	err := w.Pull(&git.PullOptions{RemoteName: "origin", Auth: auth, Progress: os.Stdout})
+	if err != nil {
+		panic(err)
+	}
 	return nil
+
 }
 
 // pushes changes to master
@@ -33,27 +43,16 @@ func (r *Repository) pushOrigin() error {
 	return nil
 }
 
-func (r *Repository) clone() error {
-	//TODO check errors
-	keyPath, _ := r.getCreateKeyFile()
-	cmd := fmt.Sprintf("ssh-agent bash -c 'ssh-add %s; git clone %s'", keyPath, r.Url)
-	out, _ := exec.Command(cmd).Output()
-	fmt.Println(out)
-	return nil
-}
+func (r *Repository) Clone() error {
+	ss, _ := ssh.ParsePrivateKey([]byte(r.Key))
+	auth := &gitssh.PublicKeys{User: "git", Signer: ss}
+	// dir
+	repo, _ := git.PlainClone(r.Dir(), false, &git.CloneOptions{
+		URL:               r.Url,
+		RecurseSubmodules: git.DefaultSubmoduleRecursionDepth,
+		Auth:              auth,
+	})
 
-// Returns the path to a key file that will be used to
-// perform remote operations on the repo eg: clone, push, pull
-func (r *Repository) getCreateKeyFile() (string, error) {
-	// by default keys are saved in /tmp/keys/{repoId}
-	fp := "/tmp/keys/" + string(r.Id)
-	if _, err := os.Stat("/tmp/keys/"); err == nil {
-		// create file if it doesnt exists
-		d := []byte(r.Key)
-		err := ioutil.WriteFile(fp, d, 0777)
-		if err != nil {
-			return "", err
-		}
-	}
-	return fp, nil
+	fmt.Println(repo)
+	return nil
 }

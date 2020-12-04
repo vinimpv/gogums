@@ -11,3 +11,7 @@ type ResourcesGroupSerializer struct {
 	Main        *ResourcesDefinitionSerializer
 	List        []ResourcesDefinitionSerializer
 }
+
+// opens up site repo dir
+// parses the templates
+// iterate through the names, read files in folder convert to Resource
