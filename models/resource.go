@@ -14,6 +14,7 @@ type SiteResources struct {
 type ResourcesGroup struct {
 	Name        string      `json:"name"`
 	Description string      `json:"description"`
+	Path        string      `json:"path"`
 	Index       *Resource   `json:"index"`
 	List        []*Resource `json:"list"`
 
