@@ -3,9 +3,11 @@ package services
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"vinimpv/gogums/models"
 )
@@ -39,7 +41,8 @@ func parseListFile(filePath string, rg *models.ResourcesGroup) error {
 		fieldMap[arr[0]] = arr[1]
 	}
 	content := strings.Join(text[contentIndex+1:], "\n")
-	listResource := &models.Resource{Name: file.Name(), Type: "list", Path: filePath, Content: content}
+	fileName := filepath.Base(file.Name())
+	listResource := &models.Resource{Name: fileName, Type: "list", Path: filePath, Content: content}
 	for _, f := range rg.ListTemplate.Fields {
 		// removes double quotes
 		f.Value = strings.ReplaceAll(fieldMap[f.Name], `"`, "")
@@ -58,9 +61,11 @@ func parseGroup(group string, sr *models.SiteResources, repoDir string) {
 	groupFile, _ := os.Open(fmt.Sprintf("%s/.gogums/%s.json", repoDir, group))
 	groupBytes, _ := ioutil.ReadAll(groupFile)
 	rg := &models.ResourcesGroup{}
-	json.Unmarshal(groupBytes, rg)
-	sr.ResourcesGroups = append(sr.ResourcesGroups, rg)
 	groupPath := fmt.Sprintf("%s/%s/%s", repoDir, sr.ContentFolder, group)
+	json.Unmarshal(groupBytes, rg)
+	rg.Name = group
+	rg.Path = groupPath
+	sr.ResourcesGroups = append(sr.ResourcesGroups, rg)
 	files, _ := ioutil.ReadDir(groupPath)
 	for _, file := range files {
 		switch file.Name() {
@@ -91,4 +96,63 @@ func ParseResources(site *models.Site) (*models.SiteResources, error) {
 		parseGroup(group, siteResources, site.Repository.Dir())
 	}
 	return siteResources, nil
+}
+
+func getResourceGroupByName(list []*models.ResourcesGroup, name string) *models.ResourcesGroup {
+	for _, rg := range list {
+		if rg.Name == name {
+			return rg
+		}
+	}
+	return nil
+}
+
+func getResourceByName(list []*models.Resource, name string) *models.Resource {
+	for _, r := range list {
+		if r.Name == name {
+			return r
+		}
+	}
+	return nil
+}
+
+func SaveResource(site *models.Site, resource *models.Resource, groupName string) (*models.Resource, error) {
+	siteResources, err := ParseResources(site)
+	if err != nil {
+		return nil, err
+	}
+	rg := getResourceGroupByName(siteResources.ResourcesGroups, groupName)
+	if rg == nil {
+		return nil, errors.New("Resource group not found")
+	}
+
+	// check if resource already exists
+	// TODO _index.md case
+	existingResource := getResourceByName(rg.List, resource.Name)
+	// delete and rewrite
+
+	// safer path to delete (coming from the parsed resource group)
+	resourcePath := fmt.Sprintf("%s/%s", rg.Path, resource.Name)
+	if existingResource != nil {
+		os.Remove(resourcePath)
+	}
+	f, err := os.Create(resourcePath)
+	defer f.Close()
+	w := bufio.NewWriter(f)
+	w.WriteString("---\n")
+	for _, field := range resource.Fields {
+		var value string
+		switch field.Type {
+		case "datetime", "text-list":
+			value = field.Value
+		default:
+			value = fmt.Sprintf(`"%s"`, field.Value)
+		}
+		line := fmt.Sprintf("%s: %s\n", field.Name, value)
+		w.WriteString(line)
+	}
+	w.WriteString("---\n")
+	w.WriteString(resource.Content)
+	w.Flush()
+	return resource, nil
 }
