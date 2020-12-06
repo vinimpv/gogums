@@ -62,10 +62,11 @@ func main() {
 	r.Route("/sites", func(r chi.Router) {
 		r.Get("/", controlers.GetSites)
 
-		r.Put("/", controlers.CreateSite) // POST /articles
+		r.Put("/", controlers.CreateSite)
 		r.Route("/{siteId}", func(r chi.Router) {
-			r.Use(SiteContext)             // Load the *Article on the request context
-			r.Get("/", controlers.GetSite) // GET /articles/123
+			r.Use(SiteContext)
+			r.Get("/", controlers.GetSite)
+			r.Put("/resources", controlers.ResourceControler)
 		})
 	})
 	r.Route("/repositories", func(r chi.Router) {
@@ -77,7 +78,7 @@ func main() {
 	filesDir := http.Dir(filepath.Join(workDir, "repos/cde/exampleSite/public"))
 	FileServer(r, "/preview", filesDir)
 
-	http.ListenAndServe(":3000", r)
+	http.ListenAndServe(":3001", r)
 
 }
 
